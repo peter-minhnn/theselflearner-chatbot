@@ -74,6 +74,8 @@ io.on('connection', (socket) => { // socket object may be used to send specific 
                 } else {
                     c.messages.push(message);
                 }
+                if (message.senderName === 'admin') c.incomingAdminMsg += 1;
+                if (message.senderName !== 'admin') c.incomingUserMsg += 1;
             }
         });
         io.emit('message', message);
@@ -84,11 +86,23 @@ io.on('connection', (socket) => { // socket object may be used to send specific 
             name: message.senderName,
             participants: 0,
             id: message.channel_id,
-            sockets: []
+            sockets: [],
+            incomingUserMsg: 0,
+            incomingAdminMsg: 0,
         }
         let index = STATIC_CHANNELS.findIndex(x => x.id === obj.id);
         if (index === -1) STATIC_CHANNELS.push(obj);
         io.emit('user-channel', STATIC_CHANNELS);
+    });
+
+    socket.on('badge-notification', badgeNoti => {
+        STATIC_CHANNELS.map(elem => {
+            if (elem.id == badgeNoti.channel_id) {
+                if (badgeNoti.type === 'admin') elem.incomingUserMsg = 0;
+                if (badgeNoti.type === 'user') elem.incomingAdminMsg = 0;
+            }
+        })
+        io.emit('user-badge-notification', STATIC_CHANNELS);
     });
 
     socket.on('disconnect', () => {
